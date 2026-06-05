@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Makerble Signature Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Quicksand', Arial, sans-serif; background: #f1f4f8; }
+
+  /* ---- Layout ---- */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  #header { background: #1e2d4e; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  #body   { display: flex; flex: 1; overflow: hidden; }
+  #panel  { width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+  #preview-area { flex: 1; overflow-y: auto; padding: 28px 32px; background: #f1f4f8; }
+
+  /* ---- Header ---- */
+  .hdr-brand { display: flex; align-items: center; gap: 12px; }
+  .hdr-brand img { height: 36px; width: auto; }
+  .hdr-title { color: #fff; font-weight: 700; font-size: 15px; }
+  .hdr-sub   { color: #7e96b8; font-size: 11px; font-weight: 500; }
+
+  /* ---- Header buttons ---- */
+  .hdr-btns { display: flex; align-items: center; gap: 8px; }
+  .hdr-btn {
+    color: #fff; border: none; border-radius: 7px;
+    padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer;
+    font-family: inherit; display: flex; align-items: center; gap: 7px;
+    transition: background 0.2s; white-space: nowrap;
+  }
+  #preview-btn  { background: #327AB7; }
+  #preview-btn:hover  { background: #2563a0; }
+  #download-btn { background: #AC3897; }
+  #download-btn:hover { background: #96307f; }
+  #download-btn.success { background: #22c55e; }
+
+  /* ---- Section tabs ---- */
+  #tabs { padding: 10px 12px 0; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 4; padding-bottom: 0; }
+  .tab {
+    background: transparent; color: #64748b; border: 1px solid #e2e8f0;
+    border-radius: 5px; padding: 5px 10px; font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: inherit; margin-bottom: 8px; margin-right: 4px;
+    transition: all 0.15s;
+  }
+  .tab.active { background: #1e2d4e; color: #fff; border-color: #1e2d4e; }
+
+  /* ---- Form fields ---- */
+  #fields { flex: 1; overflow-y: auto; padding: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .field input, .field textarea {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 8px 10px; font-size: 13px; font-family: inherit; color: #1a202c;
+    outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: #AC3897; }
+  .field textarea { resize: vertical; }
+  .field .hint { font-size: 10px; color: #94a3b8; margin-top: 3px; }
+
+  /* ---- Reset button ---- */
+  #reset-wrap { padding: 12px 16px; border-top: 1px solid #e2e8f0; }
+  #reset-btn {
+    width: 100%; background: transparent; border: 1px solid #e2e8f0;
+    border-radius: 6px; padding: 8px; font-size: 12px; font-weight: 600;
+    color: #94a3b8; cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  #reset-btn:hover { border-color: #cbd5e1; color: #64748b; }
+
+  /* ---- Preview area ---- */
+  .preview-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .preview-label span:first-child { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+  .preview-label span:last-child  { font-size: 11px; color: #cbd5e1; }
+  #email-chrome { background: #fff; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); overflow: hidden; max-width: 680px; }
+  #email-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; }
+  .email-row { font-size: 11px; color: #94a3b8; margin-bottom: 5px; }
+  .email-subject { font-size: 13px; font-weight: 600; color: #1a202c; }
+  #email-body { padding: 20px 20px 8px; }
+  .email-pre { font-size: 13px; color: #475569; margin-bottom: 20px; line-height: 1.6; }
+  #sig-preview { max-width: 580px; }
+
+  /* ---- Install guide ---- */
+  #install-guide { margin-top: 20px; background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 16px 20px; max-width: 680px; }
+  .guide-title { font-size: 12px; font-weight: 700; color: #1e2d4e; margin-bottom: 10px; }
+  .guide-step { display: flex; gap: 10px; margin-bottom: 7px; align-items: flex-start; }
+  .guide-num { width: 20px; height: 20px; border-radius: 50%; background: #1e2d4e; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .guide-text { font-size: 12px; color: #475569; line-height: 1.5; }
+  .guide-tip { margin-top: 10px; font-size: 11px; color: #94a3b8; line-height: 1.5; }
+  .guide-tip strong { color: #64748b; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="hdr-brand">
+      <img src="https://raw.githubusercontent.com/mattkepple/comms-assets/main/circlesandm.jpg" alt="Makerble">
+      <div>
+        <div class="hdr-title">Signature Generator</div>
+        <div class="hdr-sub">Makerble team tool</div>
+      </div>
+    </div>
+    <div class="hdr-btns">
+      <button id="preview-btn" class="hdr-btn" onclick="launchPreview()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Launch preview
+      </button>
+      <button id="download-btn" class="hdr-btn" onclick="downloadSignature()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div id="body">
+
+    <!-- LEFT PANEL -->
+    <div id="panel">
+      <div id="tabs"></div>
+      <div id="fields"></div>
+      <div id="reset-wrap">
+        <button id="reset-btn" onclick="resetFields()">Reset to defaults</button>
+      </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div id="preview-area">
+      <div class="preview-label">
+        <span>Live preview</span>
+        <span>Updates as you type</span>
+      </div>
+      <div id="email-chrome">
+        <div id="email-header">
+          <div class="email-row" id="from-line">From: matt.kepple@makerble.com</div>
+          <div class="email-row">To: recipient@example.com</div>
+          <div class="email-subject">Subject: Your email subject here</div>
+        </div>
+        <div id="email-body">
+          <div class="email-pre">Hi there,<br><br>Your email body goes here...<br><br>Kind regards,</div>
+          <div id="sig-preview"></div>
+        </div>
+      </div>
+
+      <div id="install-guide">
+        <div class="guide-title">How to install in Gmail</div>
+        <div class="guide-step"><div class="guide-num">1</div><div class="guide-text">Fill in your details using the form on the left</div></div>
+        <div class="guide-step"><div class="guide-num">2</div><div class="guide-text">Click <strong>"Copy signature HTML"</strong> in the top right — this copies the raw HTML code</div></div>
+        <div class="guide-step"><div class="guide-num">3</div><div class="guide-text">Open Gmail → Settings (gear icon) → See all settings → Signature → Create new</div></div>
+        <div class="guide-step"><div class="guide-num">4</div><div class="guide-text">Click inside the signature text box and paste (Cmd+V on Mac / Ctrl+V on Windows)</div></div>
+        <div class="guide-step"><div class="guide-num">5</div><div class="guide-text">Scroll down and click <strong>Save Changes</strong></div></div>
+        <div class="guide-tip"><strong>Note:</strong> Images load from Google Drive. If they appear broken in the Gmail editor, don't worry — they will display correctly for recipients as long as the Drive files remain shared with "Anyone with the link".</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ---- Image URLs ----
+const IMG = {
+  shield:   "https://raw.githubusercontent.com/mattkepple/comms-assets/main/circlesandm.jpg",
+  phone:    "https://raw.githubusercontent.com/mattkepple/comms-assets/main/Phone%20grey%20icon.png",
+  envelope: "https://raw.githubusercontent.com/mattkepple/comms-assets/main/Envelope%20grey%20icon.png",
+  web:      "https://raw.githubusercontent.com/mattkepple/comms-assets/main/Web%20grey%20icon.png",
+  camera:   "https://raw.githubusercontent.com/mattkepple/comms-assets/main/Camcorder%20grey%20icon.png",
+  linkedin: "https://raw.githubusercontent.com/mattkepple/comms-assets/main/LinkedIn%20circle%20logo%20icon.png",
+  youtube:  "https://raw.githubusercontent.com/mattkepple/comms-assets/main/Social%20media%20icons-04.png",
+};
+
+// ---- Default field values ----
+const DEFAULTS = {
+  name:           "Matt Kepple",
+  role:           "CEO - Makerble",
+  phone:          "+44 (0)1225 595594",
+  phoneHref:      "tel:+441225595594",
+  email:          "matt.kepple@makerble.com",
+  website:        "discover.makerble.com",
+  websiteHref:    "https://discover.makerble.com",
+  tedxLabel:      "Watch my TEDx Talk",
+  tedxHref:       "https://www.youtube.com/watch?v=R1PM1TKv4oM",
+  tagline:        "Change the\nworld faster",
+  linkedinHref:   "https://linkedin.com/company/makerble",
+  youtubeHref:    "https://www.youtube.com/user/makerble/videos",
+  referralText:   "Know a charity or social impact organisation that needs better tools? Referrals mean a lot to us - if someone you know could benefit from Makerble, I'd love an introduction.",
+  referralLink:   "Connect us here \u2192",
+  referralHref:   "mailto:matt.kepple@makerble.com?subject=Introduction",
+  bannerHeadline: "Makerble - the free CRM built for social impact",
+  bannerSub:      "Track outcomes \u00b7 measure change \u00b7 demonstrate the difference you make",
+  bannerCta:      "Start free \u2192",
+  bannerHref:     "https://www.makerble.com/start",
+};
+
+// ---- Field definitions ----
+const SECTIONS = [
+  {
+    name: "Personal",
+    fields: [
+      { key: "name",      label: "Full name"  },
+      { key: "role",      label: "Job title"  },
+    ]
+  },
+  {
+    name: "Contact",
+    fields: [
+      { key: "phone",       label: "Phone (display)" },
+      { key: "phoneHref",   label: "Phone (href)",    hint: "e.g. tel:+441234567890" },
+      { key: "email",       label: "Email address" },
+      { key: "website",     label: "Website (display)" },
+      { key: "websiteHref", label: "Website (URL)" },
+      { key: "tedxLabel",   label: "TEDx label" },
+      { key: "tedxHref",    label: "TEDx URL" },
+    ]
+  },
+  {
+    name: "Tagline",
+    fields: [
+      { key: "tagline",     label: "Tagline",         textarea: true, hint: "New line = line break" },
+      { key: "linkedinHref",label: "LinkedIn URL" },
+      { key: "youtubeHref", label: "YouTube URL" },
+    ]
+  },
+  {
+    name: "Referral",
+    fields: [
+      { key: "referralText", label: "Message text",  textarea: true },
+      { key: "referralLink", label: "Link label" },
+      { key: "referralHref", label: "Link URL" },
+    ]
+  },
+  {
+    name: "Banner",
+    fields: [
+      { key: "bannerHeadline", label: "Headline" },
+      { key: "bannerSub",      label: "Subline" },
+      { key: "bannerCta",      label: "Button label" },
+      { key: "bannerHref",     label: "Button URL" },
+    ]
+  },
+];
+
+// ---- State ----
+let values = Object.assign({}, DEFAULTS);
+let activeSection = 0;
+
+// ---- Build tabs ----
+function renderTabs() {
+  const container = document.getElementById("tabs");
+  container.innerHTML = "";
+  SECTIONS.forEach((s, i) => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (i === activeSection ? " active" : "");
+    btn.textContent = s.name;
+    btn.onclick = () => { activeSection = i; renderTabs(); renderFields(); };
+    container.appendChild(btn);
+  });
+}
+
+// ---- Build form fields ----
+function renderFields() {
+  const container = document.getElementById("fields");
+  container.innerHTML = "";
+  SECTIONS[activeSection].fields.forEach(f => {
+    const div = document.createElement("div");
+    div.className = "field";
+
+    const label = document.createElement("label");
+    label.textContent = f.label;
+    div.appendChild(label);
+
+    let input;
+    if (f.textarea) {
+      input = document.createElement("textarea");
+      input.rows = 3;
+    } else {
+      input = document.createElement("input");
+      input.type = "text";
+    }
+    input.value = values[f.key];
+    input.oninput = () => { values[f.key] = input.value; renderPreview(); };
+    div.appendChild(input);
+
+    if (f.hint) {
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = f.hint;
+      div.appendChild(hint);
+    }
+
+    container.appendChild(div);
+  });
+}
+
+// ---- Build signature HTML ----
+function buildSignatureHTML() {
+  const taglineHTML = values.tagline.replace(/\n/g, "<br>");
+  return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:'Quicksand',Arial,sans-serif;max-width:580px;width:100%;">
+  <tr>
+    <td style="padding:0 0 16px 0;border-bottom:1px solid #e2e8f0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr valign="top">
+          <td width="78" style="padding-right:14px;padding-top:2px;" valign="top">
+            <img src="${IMG.shield}" alt="Makerble" width="68" style="display:block;border:0;height:auto;" />
+          </td>
+          <td valign="top" style="padding-right:12px;">
+            <p style="margin:0 0 2px 0;font-size:17px;font-weight:700;color:#1a202c;letter-spacing:-0.01em;font-family:'Quicksand',Arial,sans-serif;">${esc(values.name)}</p>
+            <p style="margin:0 0 10px 0;font-size:13px;font-weight:500;color:#64748b;font-family:'Quicksand',Arial,sans-serif;">${esc(values.role)}</p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:5px;"><tr valign="middle">
+              <td width="20" valign="middle"><img src="${IMG.phone}" alt="" width="13" height="13" style="display:block;border:0;" /></td>
+              <td style="font-size:12.5px;font-weight:500;font-family:'Quicksand',Arial,sans-serif;"><a href="${esc(values.phoneHref)}" style="color:#327AB7;text-decoration:none;">${esc(values.phone)}</a></td>
+            </tr></table>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:5px;"><tr valign="middle">
+              <td width="20" valign="middle"><img src="${IMG.envelope}" alt="" width="13" height="13" style="display:block;border:0;" /></td>
+              <td style="font-size:12.5px;font-weight:500;font-family:'Quicksand',Arial,sans-serif;"><a href="mailto:${esc(values.email)}" style="color:#327AB7;text-decoration:none;">${esc(values.email)}</a></td>
+            </tr></table>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:5px;"><tr valign="middle">
+              <td width="20" valign="middle"><img src="${IMG.web}" alt="" width="13" height="13" style="display:block;border:0;" /></td>
+              <td style="font-size:12.5px;font-weight:500;font-family:'Quicksand',Arial,sans-serif;"><a href="${esc(values.websiteHref)}" style="color:#327AB7;text-decoration:none;">${esc(values.website)}</a></td>
+            </tr></table>
+            <table cellpadding="0" cellspacing="0" border="0"><tr valign="middle">
+              <td width="20" valign="middle"><img src="${IMG.camera}" alt="" width="13" height="13" style="display:block;border:0;" /></td>
+              <td style="font-size:12.5px;font-weight:500;font-family:'Quicksand',Arial,sans-serif;"><a href="${esc(values.tedxHref)}" style="color:#327AB7;text-decoration:none;">${esc(values.tedxLabel)}</a></td>
+            </tr></table>
+          </td>
+          <td valign="bottom" align="right" style="white-space:nowrap;">
+            <table cellpadding="0" cellspacing="0" border="0" align="right">
+              <tr><td align="right" style="padding-bottom:10px;">
+                <table cellpadding="0" cellspacing="0" border="0"><tr>
+                  <td width="10"><div style="width:7px;height:7px;border-radius:50%;background:#ed4199;"></div></td>
+                  <td width="10"><div style="width:7px;height:7px;border-radius:50%;background:#ff793b;"></div></td>
+                  <td width="10"><div style="width:7px;height:7px;border-radius:50%;background:#ffaa36;"></div></td>
+                  <td width="10"><div style="width:7px;height:7px;border-radius:50%;background:#70b057;"></div></td>
+                  <td width="10"><div style="width:7px;height:7px;border-radius:50%;background:#40a3d7;"></div></td>
+                  <td width="10"><div style="width:7px;height:7px;border-radius:50%;background:#b64e9f;"></div></td>
+                </tr></table>
+              </td></tr>
+              <tr><td align="right" style="padding-bottom:10px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.09em;font-weight:600;font-family:'Quicksand',Arial,sans-serif;line-height:1.5;">
+                ${taglineHTML}
+              </td></tr>
+              <tr><td align="right">
+                <table cellpadding="0" cellspacing="0" border="0"><tr>
+                  <td style="padding-right:6px;"><a href="${esc(values.linkedinHref)}" style="display:block;text-decoration:none;"><img src="${IMG.linkedin}" alt="LinkedIn" width="28" height="28" style="display:block;border:0;" /></a></td>
+                  <td><a href="${esc(values.youtubeHref)}" style="display:block;text-decoration:none;"><img src="${IMG.youtube}" alt="YouTube" width="28" height="28" style="display:block;border:0;" /></a></td>
+                </tr></table>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding-top:12px;padding-bottom:10px;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#EAEDF1;border-radius:8px;border:1px solid #d4d8de;">
+        <tr valign="top">
+          <td width="36" style="padding:12px 0 12px 14px;">
+            <img src="https://raw.githubusercontent.com/mattkepple/comms-assets/main/purple%20noun-friends-5250876-AC3897.png" alt="" width="17" height="17" style="display:block;margin-top:1px;border:0;" />
+          </td>
+          <td style="padding:12px 14px 12px 4px;font-size:12px;font-weight:500;color:#475569;line-height:1.6;font-family:'Quicksand',Arial,sans-serif;">
+            ${esc(values.referralText)} <a href="${esc(values.referralHref)}" style="color:#AC3897;font-weight:600;text-decoration:none;">${esc(values.referralLink)}</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1e2d4e;border-radius:8px;">
+        <tr valign="middle">
+          <td style="padding:13px 18px;">
+            <p style="margin:0 0 2px 0;font-size:13px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;font-family:'Quicksand',Arial,sans-serif;">${esc(values.bannerHeadline)}</p>
+            <p style="margin:0;font-size:11px;font-weight:500;color:#7e96b8;font-family:'Quicksand',Arial,sans-serif;">${esc(values.bannerSub)}</p>
+          </td>
+          <td style="padding:13px 18px 13px 0;" align="right" valign="middle">
+            <a href="${esc(values.bannerHref)}" style="display:inline-block;background:#AC3897;border-radius:5px;padding:6px 13px;font-size:11px;font-weight:700;color:#ffffff;text-decoration:none;font-family:'Quicksand',Arial,sans-serif;white-space:nowrap;">${esc(values.bannerCta)}</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+}
+
+// ---- Escape HTML special chars ----
+function esc(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ---- Render live preview ----
+function renderPreview() {
+  document.getElementById("sig-preview").innerHTML = buildSignatureHTML();
+  document.getElementById("from-line").textContent = "From: " + values.email;
+}
+
+// ---- Launch preview in new tab ----
+function launchPreview() {
+  const sigHTML = buildSignatureHTML();
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Makerble Signature - Select All and Copy to use in Gmail</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 40px; font-family: 'Quicksand', Arial, sans-serif; background: #f1f4f8; }
+  .instructions {
+    max-width: 640px; margin-bottom: 24px; background: #1e2d4e;
+    border-radius: 10px; padding: 16px 20px; color: #fff;
+  }
+  .instructions h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .instructions ol { padding-left: 18px; }
+  .instructions li { font-size: 12px; color: #94a3b8; line-height: 1.8; }
+  .instructions li strong { color: #fff; }
+  .sig-wrap {
+    max-width: 640px; background: #fff; border-radius: 10px;
+    padding: 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  }
+</style>
+</head>
+<body>
+<div class="instructions">
+  <h2>To install this signature in Gmail:</h2>
+  <ol>
+    <li>Press <strong>Cmd+A</strong> (Mac) or <strong>Ctrl+A</strong> (Windows) to select everything on this page</li>
+    <li>Press <strong>Cmd+C</strong> / <strong>Ctrl+C</strong> to copy</li>
+    <li>Open <strong>Gmail &rarr; Settings &rarr; See all settings &rarr; Signature &rarr; Create new</strong></li>
+    <li>Click inside the signature box and press <strong>Cmd+V</strong> / <strong>Ctrl+V</strong> to paste</li>
+    <li>Scroll down and click <strong>Save Changes</strong></li>
+  </ol>
+</div>
+<div class="sig-wrap">
+${sigHTML}
+</div>
+</body>
+</html>`;
+  const blob = new Blob([fullHTML], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+// ---- Download signature as HTML file ----
+function downloadSignature() {
+  const sigHTML = buildSignatureHTML();
+  const name = (values.name || 'signature').toLowerCase().replace(/\s+/g, '-');
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Makerble Signature - Select All and Copy to use in Gmail</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 40px; font-family: 'Quicksand', Arial, sans-serif; background: #f1f4f8; }
+  .instructions {
+    max-width: 640px; margin-bottom: 24px; background: #1e2d4e;
+    border-radius: 10px; padding: 16px 20px; color: #fff;
+  }
+  .instructions h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .instructions ol { padding-left: 18px; }
+  .instructions li { font-size: 12px; color: #94a3b8; line-height: 1.8; }
+  .instructions li strong { color: #fff; }
+  .sig-wrap {
+    max-width: 640px; background: #fff; border-radius: 10px;
+    padding: 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  }
+</style>
+</head>
+<body>
+<div class="instructions">
+  <h2>To install this signature in Gmail:</h2>
+  <ol>
+    <li>Press <strong>Cmd+A</strong> (Mac) or <strong>Ctrl+A</strong> (Windows) to select everything on this page</li>
+    <li>Press <strong>Cmd+C</strong> / <strong>Ctrl+C</strong> to copy</li>
+    <li>Open <strong>Gmail &rarr; Settings &rarr; See all settings &rarr; Signature &rarr; Create new</strong></li>
+    <li>Click inside the signature box and press <strong>Cmd+V</strong> / <strong>Ctrl+V</strong> to paste</li>
+    <li>Scroll down and click <strong>Save Changes</strong></li>
+  </ol>
+</div>
+<div class="sig-wrap">
+${sigHTML}
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([fullHTML], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'makerble-signature-' + name + '.html';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const btn = document.getElementById('download-btn');
+  btn.classList.add('success');
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Downloaded!';
+  setTimeout(() => {
+    btn.classList.remove('success');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download';
+  }, 2500);
+}
+
+// ---- Reset ----
+function resetFields() {
+  values = Object.assign({}, DEFAULTS);
+  renderFields();
+  renderPreview();
+}
+
+// ---- Init ----
+renderTabs();
+renderFields();
+renderPreview();
+</script>
+</body>
+</html>
